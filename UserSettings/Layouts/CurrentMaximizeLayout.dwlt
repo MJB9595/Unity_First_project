@@ -24,7 +24,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 112}
   m_MaxSize: {x: 24288, y: 16192}
   vertical: 0
-  controlID: 22227
+  controlID: 22470
   draggingID: 0
 --- !u!114 &2
 MonoBehaviour:
@@ -153,7 +153,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 112}
   m_MaxSize: {x: 16192, y: 16192}
   vertical: 1
-  controlID: 22228
+  controlID: 22471
   draggingID: 0
 --- !u!114 &4
 MonoBehaviour:
@@ -179,7 +179,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 56}
   m_MaxSize: {x: 16192, y: 8096}
   vertical: 0
-  controlID: 22229
+  controlID: 22472
   draggingID: 0
 --- !u!114 &5
 MonoBehaviour:
@@ -200,8 +200,8 @@ MonoBehaviour:
     y: 0
     width: 326
     height: 511.5
-  m_MinSize: {x: 201, y: 226}
-  m_MaxSize: {x: 4001, y: 4026}
+  m_MinSize: {x: 200, y: 200}
+  m_MaxSize: {x: 4000, y: 4000}
   m_ActualView: {fileID: 6}
   m_Panes:
   - {fileID: 6}
@@ -249,9 +249,9 @@ MonoBehaviour:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
       m_SelectedIDs:
-      - m_Data: 48722
+      - m_Data: 48818
       m_LastClickedID:
-        m_Data: 48722
+        m_Data: 48818
       m_ExpandedIDs:
       - m_Data: -31094
       - m_Data: -31090
@@ -275,8 +275,8 @@ MonoBehaviour:
       - m_Data: -30850
       - m_Data: -30846
       - m_Data: -30842
-      - m_Data: -30812
       - m_Data: -1298
+      - m_Data: 48782
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -869,9 +869,9 @@ MonoBehaviour:
   m_AudioPlay: 0
   m_DebugDrawModesUseInteractiveLightBakingData: 0
   m_Position:
-    m_Target: {x: 0, y: 19, z: -3}
+    m_Target: {x: 29.473898, y: -35.429337, z: -0.27487874}
     speed: 2
-    m_Value: {x: 0, y: 19, z: -3}
+    m_Value: {x: 29.473898, y: -35.429337, z: -0.27487874}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 0
@@ -917,13 +917,13 @@ MonoBehaviour:
     m_GridAxis: 1
     m_gridOpacity: 0.5
   m_Rotation:
-    m_Target: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
+    m_Target: {x: 0.35385653, y: 0.59942126, z: -0.3336393, w: 0.6357426}
     speed: 2
-    m_Value: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
+    m_Value: {x: 0.35385582, y: 0.5994201, z: -0.3336386, w: 0.6357413}
   m_Size:
-    m_Target: 10
+    m_Target: 24.530502
     speed: 2
-    m_Value: 10
+    m_Value: 24.530502
   m_Ortho:
     m_Target: 0
     speed: 2
@@ -1143,7 +1143,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets/RPG Tiny Hero Duo/Texture
+    - Assets
     m_Globs: []
     m_ProductIds: 
     m_AnyWithAssetOrigin: 0
@@ -1153,7 +1153,7 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 64
   m_LastFolders:
-  - Assets/RPG Tiny Hero Duo/Texture
+  - Assets
   m_LastFoldersGridSize: -1
   m_LastProjectPath: /Users/mjb/tri-2-project
   m_LockTracker:
@@ -1162,12 +1162,13 @@ MonoBehaviour:
   m_FolderTreeState:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs:
-    - m_Data: 52588
+    - m_Data: 48898
     m_LastClickedID:
-      m_Data: 52588
+      m_Data: 48898
     m_ExpandedIDs:
     - m_Data: 0
     - m_Data: 48898
+    - m_Data: 49194
     - m_Data: 53188
     - m_Data: 1000000000
     - m_Data: 2147483647
@@ -1233,9 +1234,9 @@ MonoBehaviour:
       m_ResourceFile: 
   m_ListAreaState:
     m_SelectedInstanceIDs:
-    - m_Data: 48722
-    m_LastClickedInstanceID: 48722
-    m_HadKeyboardFocusLastEvent: 0
+    - m_Data: 48818
+    m_LastClickedInstanceID: 48818
+    m_HadKeyboardFocusLastEvent: 1
     m_ExpandedInstanceIDs:
     - m_Data: 52238
     - m_Data: 52386
@@ -1260,7 +1261,7 @@ MonoBehaviour:
       m_OriginalEventType: 11
       m_IsRenamingFilename: 1
       m_TrimLeadingAndTrailingWhitespace: 0
-      m_ClientGUIView: {fileID: 10}
+      m_ClientGUIView: {fileID: 0}
     m_CreateAssetUtility:
       m_EndAction: {fileID: 0}
       m_InstanceID: 0
@@ -1329,8 +1330,8 @@ MonoBehaviour:
     y: 0
     width: 331.5
     height: 863
-  m_MinSize: {x: 276, y: 76}
-  m_MaxSize: {x: 4001, y: 4026}
+  m_MinSize: {x: 275, y: 50}
+  m_MaxSize: {x: 4000, y: 4000}
   m_ActualView: {fileID: 14}
   m_Panes:
   - {fileID: 14}
