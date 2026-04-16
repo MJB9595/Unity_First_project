@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using Unity.Cinemachine;
 
 public class WallMergeSystem : MonoBehaviour
@@ -11,19 +12,22 @@ public class WallMergeSystem : MonoBehaviour
     public float wallMoveSpeed = 3.5f;
 
     [Header("코너 감지")]
-    public float cornerCheckDistance = 1.2f;  // 코너 탐색 거리
-    public float cornerCheckOffset   = 0.5f;  // 벽 끝에서 얼마나 앞을 보는지
+    public float cornerCheckDistance = 1.2f;
+    public float cornerCheckOffset   = 0.5f;
 
     [Header("카메라")]
     public CinemachineCamera vcamWall;
     public CinemachineCamera vcamTop;
     public float wallCamDistance = 8f;
-    public float cameraFollowSpeed = 5f;      // 카메라 따라오는 속도
+    public float cameraFollowSpeed = 5f;
 
-    [Header("비주얼")]
-    public Material silhouetteMaterial;
-    private Material originalMaterial;
-    private Renderer characterRenderer;
+    // ★ Inspector에서 MaleCharacterPBR을 직접 드래그해서 연결하세요.
+    // 비워두면 Player 자신을 제외한 자식 Renderer를 자동 탐색합니다.
+    [Header("3D 모델")]
+    public GameObject characterModel;
+
+    // 숨길 렌더러 목록 (Player 자체의 MeshRenderer는 제외)
+    private Renderer[] modelRenderers;
 
     // 상태
     private bool isMerged = false;
@@ -32,7 +36,7 @@ public class WallMergeSystem : MonoBehaviour
     private Vector3 wallPoint;
     private readonly float wallOffset = 0.1f;
 
-    // 카메라 목표 위치 (매 프레임 갱신)
+    // 카메라 목표
     private Vector3 targetCamPos;
     private Vector3 targetCamLook;
 
@@ -44,8 +48,28 @@ public class WallMergeSystem : MonoBehaviour
     {
         cc = GetComponent<CharacterController>();
         movement = GetComponent<PlayerMovement>();
-        characterRenderer = GetComponentInChildren<Renderer>();
-        originalMaterial = characterRenderer.material;
+
+        // ★ 렌더러 수집 — Player 자신에 붙은 Renderer는 반드시 제외
+        if (characterModel != null)
+        {
+            // Inspector에서 MaleCharacterPBR을 직접 연결한 경우
+            modelRenderers = characterModel.GetComponentsInChildren<Renderer>(true);
+        }
+        else
+        {
+            // 자동 탐색: Player 자신의 Renderer는 건드리지 않음
+            var list = new List<Renderer>();
+            foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
+            {
+                if (r.gameObject != gameObject)   // Player 루트 제외
+                    list.Add(r);
+            }
+            modelRenderers = list.ToArray();
+
+            if (modelRenderers.Length == 0)
+                Debug.LogWarning("[WallMergeSystem] 숨길 Renderer를 찾지 못했습니다. " +
+                                 "Inspector에서 Character Model 필드에 MaleCharacterPBR을 연결하세요.");
+        }
     }
 
     void Update()
@@ -59,7 +83,7 @@ public class WallMergeSystem : MonoBehaviour
         else
         {
             HandleWallMovement();
-            UpdateWallCamera();   // 매 프레임 카메라 추적
+            UpdateWallCamera();
 
             if (Input.GetKeyDown(KeyCode.R))
                 Detach();
@@ -103,10 +127,11 @@ public class WallMergeSystem : MonoBehaviour
         transform.position = wallPoint + wallNormal * wallOffset;
         transform.rotation = Quaternion.LookRotation(-wallNormal, Vector3.up);
 
-        if (silhouetteMaterial != null)
-            characterRenderer.material = silhouetteMaterial;
+        // ★ renderer.enabled = false 방식으로 숨기기
+        // SetActive(false)와 달리 CharacterController, 스크립트, R키 입력 모두 유지됨
+        SetModelVisible(false);
 
-        // 카메라 초기 위치 설정
+        // 카메라 초기화
         RefreshCameraTarget();
         vcamWall.transform.position = targetCamPos;
         vcamWall.transform.LookAt(targetCamLook);
@@ -114,22 +139,20 @@ public class WallMergeSystem : MonoBehaviour
     }
 
     // ──────────────────────────────────────────
-    // 카메라 — 매 프레임 플레이어 따라오기
+    // 카메라
     // ──────────────────────────────────────────
 
     void RefreshCameraTarget()
     {
-        // 벽 법선 방향으로 일정 거리 + 플레이어 높이 기준
-        targetCamPos  = transform.position + wallNormal * wallCamDistance;
+        targetCamPos   = transform.position + wallNormal * wallCamDistance;
         targetCamPos.y = transform.position.y + 2f;
-        targetCamLook = transform.position;
+        targetCamLook  = transform.position;
     }
 
     void UpdateWallCamera()
     {
         RefreshCameraTarget();
 
-        // 부드럽게 따라오기
         vcamWall.transform.position = Vector3.Lerp(
             vcamWall.transform.position,
             targetCamPos,
@@ -151,7 +174,6 @@ public class WallMergeSystem : MonoBehaviour
 
         transform.position += wallRight * input * wallMoveSpeed * Time.deltaTime;
 
-        // 현재 벽에 붙어있는지 확인
         RaycastHit hit;
         bool onWall = Physics.Raycast(
             transform.position + wallNormal * 0.5f,
@@ -162,13 +184,11 @@ public class WallMergeSystem : MonoBehaviour
             transform.position = hit.point + wallNormal * wallOffset;
             wallPoint = hit.point;
 
-            // ★ 내측 코너 감지 — 벽에 붙어있는 중에도 매 프레임 체크
             if (input != 0)
                 CheckInnerCornerOverlap();
         }
         else
         {
-            // 기존 외측 코너 로직 (건드리지 않음)
             if (input != 0)
                 TryCornerTransition(input > 0 ? wallRight : -wallRight);
             else
@@ -178,28 +198,21 @@ public class WallMergeSystem : MonoBehaviour
 
     void CheckInnerCornerOverlap()
     {
-        // CharacterController 기본 캡슐 반지름 기준
-        // Inspector에서 설정한 값과 맞춰야 함 (기본 0.4)
-        float capsuleRadius = 0.4f;
-        float overlapThreshold = capsuleRadius * 0.2f; // 반지름의 20%
+        float capsuleRadius    = 0.4f;
+        float overlapThreshold = capsuleRadius * 0.2f;
 
         Collider[] nearby = Physics.OverlapSphere(
             transform.position, capsuleRadius + overlapThreshold, mergeableWallLayer);
 
         foreach (var col in nearby)
         {
-            // 가장 가까운 표면 지점 구하기
             Vector3 closestPoint = col.ClosestPoint(transform.position);
             float dist = Vector3.Distance(transform.position, closestPoint);
 
-            // 20% 이내로 근접한 벽만 처리
             if (dist > overlapThreshold) continue;
 
-            // 이 벽의 안쪽 법선 구하기
-            // Cube 기준 transform.forward / -forward 중 플레이어를 향하는 면 선택
             Vector3 toPlayer = (transform.position - closestPoint).normalized;
 
-            // 후보 법선 4개 (Cube의 4개 옆면)
             Vector3[] candidates =
             {
                 col.transform.forward,
@@ -214,29 +227,18 @@ public class WallMergeSystem : MonoBehaviour
             foreach (var n in candidates)
             {
                 float d = Vector3.Dot(n, toPlayer);
-                if (d > bestDot)
-                {
-                    bestDot    = d;
-                    bestNormal = n;
-                }
+                if (d > bestDot) { bestDot = d; bestNormal = n; }
             }
 
-            // 현재 벽과 같은 방향이면 스킵 (현재 벽 재감지)
-            if (Vector3.Angle(wallNormal, bestNormal) < 10f) continue;
-
-            // 완전히 반대 방향이면 스킵 (등 뒤 벽)
+            if (Vector3.Angle(wallNormal, bestNormal) < 10f)  continue;
             if (Vector3.Angle(wallNormal, bestNormal) > 170f) continue;
 
-            Debug.Log($"내측 코너 감지 → {col.gameObject.name} / 법선: {bestNormal}");
-
-            // 새 벽으로 전환
             wallNormal = bestNormal;
             wallPoint  = closestPoint;
             wallRight  = Vector3.Cross(Vector3.up, wallNormal).normalized;
-
             transform.position = wallPoint + wallNormal * wallOffset;
             transform.rotation = Quaternion.LookRotation(-wallNormal, Vector3.up);
-            return; // 한 번만 전환
+            return;
         }
     }
 
@@ -245,76 +247,39 @@ public class WallMergeSystem : MonoBehaviour
         Collider[] nearby = Physics.OverlapSphere(
             transform.position, 1.8f, mergeableWallLayer);
 
-        Debug.Log($"코너 탐색 — 주변 감지된 벽 수: {nearby.Length}");
-
-        RaycastHit bestHit    = default;
-        float      bestDist   = float.MaxValue;
-        bool       foundWall  = false;
+        RaycastHit bestHit   = default;
+        float      bestDist  = float.MaxValue;
+        bool       foundWall = false;
 
         foreach (var col in nearby)
         {
-            // 현재 붙어있는 벽이면 스킵
-            if (Vector3.Angle(wallNormal,
-                (col.transform.position - transform.position).normalized) > 170f) 
-            {
-                // 현재 벽 콜라이더인지 확인 (법선 비교)
-            }
-
             Vector3 closestPoint = col.ClosestPoint(transform.position);
             float dist = Vector3.Distance(transform.position, closestPoint);
 
-            // ─────────────────────────────────────────────
-            // 핵심 변경: 바깥에서 안쪽으로 Ray를 쏴서 법선 획득
-            // 이동 방향 + 현재 wallNormal 반대 방향으로 오프셋한 위치에서 발사
-            // ─────────────────────────────────────────────
-            Vector3 rayOrigin = closestPoint
-                            + (-wallNormal) * 0.5f   // 벽 바깥쪽으로
-                            + moveDir      * 0.3f;   // 이동 방향으로 살짝
-
-            Vector3 rayDir = (closestPoint - rayOrigin).normalized;
+            Vector3 rayOrigin = closestPoint + (-wallNormal) * 0.5f + moveDir * 0.3f;
+            Vector3 rayDir    = (closestPoint - rayOrigin).normalized;
 
             RaycastHit hit;
-            if (!Physics.Raycast(rayOrigin, rayDir, out hit, 2.0f, mergeableWallLayer))
-                continue;
-
-            // 현재 벽과 같은 법선이면 스킵 (현재 벽 재감지)
-            if (Vector3.Angle(wallNormal, hit.normal) < 10f) continue;
-
-            // 완전히 반대 방향 벽 스킵
+            if (!Physics.Raycast(rayOrigin, rayDir, out hit, 2.0f, mergeableWallLayer)) continue;
+            if (Vector3.Angle(wallNormal, hit.normal) < 10f)  continue;
             if (Vector3.Angle(wallNormal, hit.normal) > 170f) continue;
 
-            // 가장 가까운 후보 선택
-            if (dist < bestDist)
-            {
-                bestDist  = dist;
-                bestHit   = hit;
-                foundWall = true;
-            }
+            if (dist < bestDist) { bestDist = dist; bestHit = hit; foundWall = true; }
         }
 
-        if (foundWall)
-            TransitionToNewWall(bestHit);
-        else
-            Detach();
+        if (foundWall) TransitionToNewWall(bestHit);
+        else           Detach();
     }
 
     void TransitionToNewWall(RaycastHit newWallHit)
     {
         Vector3 newNormal = newWallHit.normal;
-
-        // 법선이 플레이어 방향을 향하는지 확인
-        // 안쪽 코너에서 법선이 뒤집혀있으면 강제로 보정
-        Vector3 toPlayer = (transform.position - newWallHit.point).normalized;
-        if (Vector3.Dot(newNormal, toPlayer) < 0)
-        {
-            Debug.Log("법선 반전 보정 (안쪽 코너)");
-            newNormal = -newNormal;
-        }
+        Vector3 toPlayer  = (transform.position - newWallHit.point).normalized;
+        if (Vector3.Dot(newNormal, toPlayer) < 0) newNormal = -newNormal;
 
         wallNormal = newNormal;
         wallPoint  = newWallHit.point;
         wallRight  = Vector3.Cross(Vector3.up, wallNormal).normalized;
-
         transform.position = wallPoint + wallNormal * wallOffset;
         transform.rotation = Quaternion.LookRotation(-wallNormal, Vector3.up);
     }
@@ -327,37 +292,45 @@ public class WallMergeSystem : MonoBehaviour
     {
         if (!isMerged) return;
 
-        isMerged = false;
+        isMerged          = false;
         movement.isMerged = false;
 
         transform.position += wallNormal * 0.8f;
         cc.enabled = true;
 
-        if (originalMaterial != null)
-            characterRenderer.material = originalMaterial;
+        // ★ 렌더러 다시 표시
+        SetModelVisible(true);
 
         vcamWall.Priority = 1;
     }
 
     // ──────────────────────────────────────────
-    // 디버그 — Scene 뷰에서 Ray 시각화
+    // 렌더러 표시/숨김 헬퍼
+    // ──────────────────────────────────────────
+
+    void SetModelVisible(bool visible)
+    {
+        foreach (var r in modelRenderers)
+            if (r != null) r.enabled = visible;
+    }
+
+    // ──────────────────────────────────────────
+    // 디버그
     // ──────────────────────────────────────────
 
     void OnDrawGizmosSelected()
     {
         if (!isMerged) return;
 
-        // 현재 벽 유지 Ray (초록)
         Gizmos.color = Color.green;
         Gizmos.DrawRay(transform.position + wallNormal * 0.5f, -wallNormal);
 
-        // 코너 탐색 Ray (노랑)
         Gizmos.color = Color.yellow;
         Vector3 originR = transform.position + wallRight * cornerCheckOffset;
         Vector3 originL = transform.position - wallRight * cornerCheckOffset;
         Gizmos.DrawRay(originR, -wallNormal * cornerCheckDistance);
-        Gizmos.DrawRay(originR,  wallRight * cornerCheckDistance);
+        Gizmos.DrawRay(originR,  wallRight  * cornerCheckDistance);
         Gizmos.DrawRay(originL, -wallNormal * cornerCheckDistance);
-        Gizmos.DrawRay(originL, -wallRight * cornerCheckDistance);
+        Gizmos.DrawRay(originL, -wallRight  * cornerCheckDistance);
     }
 }
