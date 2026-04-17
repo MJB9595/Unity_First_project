@@ -351,9 +351,7 @@ public class WallMergeSystem : MonoBehaviour
         vcamWall.transform.LookAt(targetCamLook);
     }
 
-    // ──────────────────────────────────────────
     // 벽 위 이동 + 코너 감지
-    // ──────────────────────────────────────────
 
     void HandleWallMovement()
     {
